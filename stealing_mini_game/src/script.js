@@ -24,7 +24,7 @@ const CONFIG_DEFAULTS = {
   'cfg-fov': 60, 'cfg-view-dist': 250, 'cfg-look-speed': 1.2,
   'cfg-steal-dist': 80,
   'cfg-alert30-speed': 1.4, 'cfg-alert30-fov': 30,
-  'cfg-alert60-speed': 2, 'cfg-alert60-fov': 30
+  'cfg-alert60-speed': 2, 'cfg-alert60-fov': 60
 };
 
 // 从 localStorage 加载配置
@@ -373,10 +373,9 @@ function updateNPCVision(dt, alertPct) {
     targetFovBonus  = CFG.alert30Fov * t;
   }
 
-  // 平滑过渡（指数衰减插值，系数越大过渡越快）
-  const lerpFactor = 1 - Math.exp(-4 * dt);
-  npc.curSpeedMult += (targetSpeedMult - npc.curSpeedMult) * lerpFactor;
-  npc.curFovBonus  += (targetFovBonus  - npc.curFovBonus)  * lerpFactor;
+  // 瞬间应用目标参数值（无平滑过渡）
+  npc.curSpeedMult = targetSpeedMult;
+  npc.curFovBonus  = targetFovBonus;
 
   // NPC左右摆动视角（速度受警觉度影响）
   npc.lookAngle += npc.lookDir * CFG.lookSpeed * npc.curSpeedMult * dt;
