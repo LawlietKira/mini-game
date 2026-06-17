@@ -1,0 +1,131 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #1a1a2e; color: #eee; font-family: 'Microsoft YaHei', sans-serif; overflow: hidden; height: 100vh; }
+
+#game-container { display: flex; height: 100vh; }
+
+/* 游戏画布 */
+#game-canvas { flex: 1; position: relative; background: #16213e; overflow: hidden; }
+canvas { display: block; width: 100%; height: 100%; }
+
+/* 右侧UI面板 */
+#ui-panel {
+  width: 320px; background: #0f3460; padding: 20px; display: flex; flex-direction: column; gap: 14px;
+  border-left: 2px solid #533483; overflow-y: auto;
+}
+.panel-title { font-size: 20px; font-weight: bold; color: #e94560; text-align: center; border-bottom: 2px solid #533483; padding-bottom: 10px; }
+
+/* 进度条通用样式 */
+.bar-container { background: #1a1a2e; border-radius: 10px; padding: 8px 12px; }
+.bar-label { font-size: 13px; margin-bottom: 4px; display: flex; justify-content: space-between; }
+.bar-track { height: 18px; background: #333; border-radius: 9px; overflow: hidden; position: relative; }
+.bar-fill { height: 100%; border-radius: 9px; transition: width 0.05s linear; }
+.bar-fill.steal { background: linear-gradient(90deg, #00b4d8, #0077b6); }
+.bar-fill.alert { background: linear-gradient(90deg, #f77f00, #d62828); }
+
+/* 品质颜色 */
+.quality-white { color: #ccc; }
+.quality-green { color: #4caf50; }
+.quality-blue { color: #2196f3; }
+.quality-purple { color: #9c27b0; }
+.quality-orange { color: #ff9800; }
+.quality-unknown { color: #8d8d8d; }
+
+/* 道具列表 */
+.item-list { display: flex; flex-direction: column; gap: 6px; }
+.item-entry {
+  display: flex; justify-content: space-between; align-items: center;
+  background: #1a1a2e; padding: 8px 12px; border-radius: 8px; border: 2px solid transparent;
+  cursor: default; font-size: 13px;
+}
+.item-entry.selected { border-color: #e94560; background: #1a1a3e; }
+.item-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+
+/* 状态信息 */
+.status-box { background: #1a1a2e; border-radius: 8px; padding: 10px; font-size: 13px; line-height: 1.8; }
+.status-box .key { display: inline-block; background: #533483; padding: 1px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; }
+
+/* 操作提示 */
+.controls { font-size: 12px; color: #aaa; line-height: 2; }
+.controls kbd { background: #333; padding: 2px 8px; border-radius: 4px; border: 1px solid #555; font-family: monospace; }
+
+/* 配置面板 */
+.config-section { font-size: 12px; }
+.config-section summary { cursor: pointer; color: #e94560; font-weight: bold; font-size: 13px; }
+.config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; margin-top: 8px; }
+.config-grid label { font-size: 11px; color: #aaa; }
+.config-grid input { width: 100%; background: #1a1a2e; border: 1px solid #533483; color: #eee; padding: 3px 6px; border-radius: 4px; font-size: 12px; }
+
+/* 浮动提示 */
+#toast {
+  position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
+  background: rgba(76,175,80,0.9); color: #fff; padding: 10px 28px;
+  border-radius: 8px; font-size: 16px; font-weight: bold;
+  pointer-events: none; opacity: 0; transition: opacity 0.3s;
+  z-index: 15;
+}
+#toast.show { opacity: 1; }
+
+/* 结果弹窗 */
+#modal-overlay {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.65); z-index: 20;
+  display: none; justify-content: center; align-items: center;
+}
+#modal-overlay.show { display: flex; }
+.modal-box {
+  background: #0f3460; border: 2px solid #533483; border-radius: 16px;
+  padding: 32px 40px; text-align: center; min-width: 300px;
+  box-shadow: 0 0 40px rgba(0,0,0,0.8);
+  animation: modalIn 0.25s ease-out;
+}
+@keyframes modalIn {
+  from { transform: scale(0.85); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+.modal-title {
+  font-size: 32px; font-weight: bold; margin-bottom: 16px;
+}
+.modal-title.success { color: #4caf50; }
+.modal-title.fail    { color: #f44336; }
+.modal-time {
+  font-size: 18px; color: #ccc; margin-bottom: 24px;
+}
+.modal-time strong {
+  color: #00b4d8; font-family: 'Consolas', monospace; font-size: 24px;
+}
+.modal-btn {
+  background: #e94560; border: none; color: #fff;
+  padding: 12px 36px; border-radius: 10px; cursor: pointer;
+  font-size: 16px; font-weight: bold; transition: background 0.2s;
+}
+.modal-btn:hover { background: #c73e54; }
+
+/* 重置按钮 */
+#btn-reset {
+  background: #e94560; border: none; color: #fff; padding: 10px; border-radius: 8px;
+  cursor: pointer; font-size: 14px; font-weight: bold;
+}
+#btn-reset:hover { background: #c73e54; }
+
+/* 还原默认配置按钮 */
+.btn-reset-config {
+  flex: 1; background: #533483; border: none; color: #fff; padding: 6px 12px;
+  border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold;
+  transition: background 0.2s;
+}
+.btn-reset-config:hover { background: #6a42a0; }
+
+/* 背包 */
+.inventory { background: #1a1a2e; border-radius: 8px; padding: 10px; font-size: 13px; min-height: 40px; }
+.inv-item { padding: 2px 0; }
+
+/* 计时器 */
+.timer-box {
+  background: #1a1a2e; border-radius: 10px; padding: 10px 14px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.timer-box .timer-label { font-size: 13px; color: #aaa; }
+.timer-box .timer-value { font-size: 22px; font-weight: bold; color: #00b4d8; font-family: 'Consolas', monospace; letter-spacing: 1px; }
+.timer-box .timer-value.waiting { color: #555; font-size: 14px; font-weight: normal; }
+.timer-box .timer-value.final-success { color: #4caf50; }
+.timer-box .timer-value.final-fail { color: #f44336; }
