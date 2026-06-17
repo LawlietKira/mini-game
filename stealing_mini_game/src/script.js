@@ -6,7 +6,8 @@ const CONFIG_IDS = [
   'cfg-orange','cfg-alert-orange','cfg-unknown','cfg-alert-unknown',
   'cfg-steal-rate','cfg-boost','cfg-env-param',
   'cfg-decay-rate','cfg-alert-rate','cfg-alert-max','cfg-alert-decay',
-  'cfg-fov','cfg-view-dist','cfg-look-speed'
+  'cfg-fov','cfg-view-dist','cfg-look-speed',
+  'cfg-steal-dist','cfg-alert30-speed','cfg-alert30-fov','cfg-alert60-speed','cfg-alert60-fov'
 ];
 
 // 默认配置值
@@ -15,12 +16,15 @@ const CONFIG_DEFAULTS = {
   'cfg-green': 50, 'cfg-alert-green': 1.1,
   'cfg-blue': 65, 'cfg-alert-blue': 1.25,
   'cfg-purple': 85, 'cfg-alert-purple': 1.45,
-  'cfg-orange': 120, 'cfg-alert-orange': 1.7,
+  'cfg-orange': 105, 'cfg-alert-orange': 1.7,
   'cfg-unknown': 60, 'cfg-alert-unknown': 1.2,
   'cfg-steal-rate': 10, 'cfg-boost': 1, 'cfg-env-param': 1,
   'cfg-decay-rate': 3, 'cfg-alert-rate': 10,
   'cfg-alert-max': 100, 'cfg-alert-decay': 15,
-  'cfg-fov': 90, 'cfg-view-dist': 200, 'cfg-look-speed': 1.2
+  'cfg-fov': 60, 'cfg-view-dist': 250, 'cfg-look-speed': 1.2,
+  'cfg-steal-dist': 80,
+  'cfg-alert30-speed': 1.4, 'cfg-alert30-fov': 30,
+  'cfg-alert60-speed': 2, 'cfg-alert60-fov': 30
 };
 
 // 从 localStorage 加载配置
@@ -81,6 +85,11 @@ const CFG = {
   get fov() { return (+document.getElementById('cfg-fov').value) * Math.PI / 180; },
   get viewDist() { return +document.getElementById('cfg-view-dist').value; },
   get lookSpeed() { return +document.getElementById('cfg-look-speed').value; },
+  get stealDist() { return +document.getElementById('cfg-steal-dist').value; },
+  get alert30Speed() { return +document.getElementById('cfg-alert30-speed').value; },
+  get alert30Fov() { return (+document.getElementById('cfg-alert30-fov').value) * Math.PI / 180; },
+  get alert60Speed() { return +document.getElementById('cfg-alert60-speed').value; },
+  get alert60Fov() { return (+document.getElementById('cfg-alert60-fov').value) * Math.PI / 180; },
 };
 
 const QUALITY_COLORS = {
@@ -107,15 +116,16 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
-// NPC道具生成
+// NPC道具生成：每种品质各一个
 function generateItems() {
-  const qualities = ['white','green','blue','purple','orange','unknown'];
-  const items = [];
-  const count = 4 + Math.floor(Math.random() * 4); // 4~7个道具
-  for (let i = 0; i < count; i++) {
-    items.push({ quality: qualities[Math.floor(Math.random() * qualities.length)] });
-  }
-  return items;
+  return [
+    { quality: 'white' },
+    { quality: 'green' },
+    { quality: 'blue' },
+    { quality: 'purple' },
+    { quality: 'orange' },
+    { quality: 'unknown' },
+  ];
 }
 
 let npc, player, stealProgress, alertLevel, selectedIndex, gameState, items, inventory;
@@ -125,7 +135,8 @@ let timerFinalClass = '';   // 计时器最终样式
 let modalVisible = false;   // 弹窗是否显示
 
 function initGame() {
-  npc = { x: W * 0.5, y: H * 0.4, facing: 0, lookDir: 1, lookAngle: 0 };
+  npc = { x: W * 0.5, y: H * 0.4, facing: 0, lookDir: 1, lookAngle: 0,
+          curSpeedMult: 1, curFovBonus: 0 };
   player = { x: W * 0.5, y: H * 0.75, speed: 180 };
   stealProgress = 0;
   alertLevel = 0;
@@ -241,14 +252,22 @@ function update(dt) {
   const isPressingQ = keys['q'];
   const isPressingE = keys['e'];
   const isPressingF = keys['f'];
-  const isActionHeld = isPressingQ || isPressingE || isPressingF;
+
+  // 计算玩家与NPC距离（提前计算，供后续逻辑使用）
+  const dxPN = player.x - npc.x;
+  const dyPN = player.y - npc.y;
+  const distToNPC = Math.sqrt(dxPN * dxPN + dyPN * dyPN);
+  const inStealRange = distToNPC <= CFG.stealDist;
+
+  // F键仅在偷窃距离内才视为有效操作（范围外按F不增加警觉度）
+  const isActionHeld = isPressingQ || isPressingE || (isPressingF && inStealRange);
 
   // Q/E切换目标（长按触发重复切换）
   if (isPressingQ) { handleSwitch(-1, dt); }
   if (isPressingE) { handleSwitch(1, dt); }
 
-  // 偷窃逻辑：F长按时增加进度
-  if (isPressingF && items.length > 0) {
+  // 偷窃逻辑：F长按时增加进度（需在距离内）
+  if (isPressingF && items.length > 0 && inStealRange) {
     gameState = 'stealing';
     timerRunning = true; // 按F时启动计时
     const rate = CFG.stealRate * CFG.boostMult;
@@ -302,11 +321,11 @@ function update(dt) {
     alertLevel = Math.max(0, alertLevel - CFG.alertDecay * dt);
   }
 
-  // NPC视野检测
-  updateNPCVision(dt);
+  // NPC视野检测（动态参数由警觉度驱动，平滑过渡）
+  updateNPCVision(dt, alertLevel);
 
   // 检查NPC是否看到玩家正在偷窃
-  if (isInViewCone() && isPressingF) {
+  if (isInViewCone() && isPressingF && inStealRange) {
     gameState = 'failed';
     timerRunning = false;
     timerFinalClass = 'final-fail';
@@ -335,9 +354,32 @@ function handleSwitch(dir, dt) {
   }
 }
 
-function updateNPCVision(dt) {
-  // NPC左右摆动视角
-  npc.lookAngle += npc.lookDir * CFG.lookSpeed * dt;
+function updateNPCVision(dt, alertPct) {
+  // 根据警觉度计算目标转头速度倍率和视野增量
+  const alertRatio = alertPct / CFG.alertMax; // 0~1
+  let targetSpeedMult, targetFovBonus;
+  if (alertRatio >= 0.6) {
+    targetSpeedMult = CFG.alert60Speed;
+    targetFovBonus  = CFG.alert60Fov;
+  } else if (alertRatio >= 0.3) {
+    // 30%~60%区间内线性插值
+    const t = (alertRatio - 0.3) / 0.3; // 0~1
+    targetSpeedMult = CFG.alert30Speed + (CFG.alert60Speed - CFG.alert30Speed) * t;
+    targetFovBonus  = CFG.alert30Fov  + (CFG.alert60Fov  - CFG.alert30Fov)  * t;
+  } else {
+    // 0~30%区间：从基础值插值到30%阈值
+    const t = alertRatio / 0.3; // 0~1
+    targetSpeedMult = 1 + (CFG.alert30Speed - 1) * t;
+    targetFovBonus  = CFG.alert30Fov * t;
+  }
+
+  // 平滑过渡（指数衰减插值，系数越大过渡越快）
+  const lerpFactor = 1 - Math.exp(-4 * dt);
+  npc.curSpeedMult += (targetSpeedMult - npc.curSpeedMult) * lerpFactor;
+  npc.curFovBonus  += (targetFovBonus  - npc.curFovBonus)  * lerpFactor;
+
+  // NPC左右摆动视角（速度受警觉度影响）
+  npc.lookAngle += npc.lookDir * CFG.lookSpeed * npc.curSpeedMult * dt;
   const maxSwing = Math.PI / 3; // 左右摆动幅度
   if (npc.lookAngle > maxSwing) { npc.lookAngle = maxSwing; npc.lookDir = -1; }
   if (npc.lookAngle < -maxSwing) { npc.lookAngle = -maxSwing; npc.lookDir = 1; }
@@ -358,7 +400,9 @@ function isInViewCone() {
   while (diff > Math.PI) diff -= 2 * Math.PI;
   while (diff < -Math.PI) diff += 2 * Math.PI;
 
-  return Math.abs(diff) < CFG.fov / 2;
+  // 使用动态视野角度（基础FOV + 警觉度增量）
+  const dynamicHalfFov = (CFG.fov + npc.curFovBonus) / 2;
+  return Math.abs(diff) < dynamicHalfFov;
 }
 
 // ==================== 渲染 ====================
@@ -395,11 +439,22 @@ function render() {
   ctx.stroke();
   ctx.restore();
 
+  // 偷窃距离圈（以NPC为圆心）
+  ctx.save();
+  ctx.setLineDash([6, 4]);
+  ctx.strokeStyle = 'rgba(76,175,80,0.35)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(npc.x, npc.y, CFG.stealDist, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+
   // 道具数量指示（NPC头顶）
   ctx.fillStyle = '#fff';
   ctx.font = '13px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText(`道具: ${items.length}个`, npc.x, npc.y - 35);
+  // ctx.fillText(`道具: ${items.length}个`, npc.x, npc.y - 35);
 
   // 玩家
   ctx.save();
@@ -416,8 +471,12 @@ function render() {
 
   // 偷窃连接线
   if (keys['f'] && gameState !== 'failed' && gameState !== 'success') {
+    const dxLine = player.x - npc.x;
+    const dyLine = player.y - npc.y;
+    const distLine = Math.sqrt(dxLine * dxLine + dyLine * dyLine);
+    const inRange = distLine <= CFG.stealDist;
     ctx.setLineDash([5, 5]);
-    ctx.strokeStyle = 'rgba(0,180,216,0.5)';
+    ctx.strokeStyle = inRange ? 'rgba(0,180,216,0.5)' : 'rgba(255,152,0,0.4)';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(player.x, player.y);
@@ -437,18 +496,49 @@ function render() {
     ctx.textAlign = 'center';
     ctx.fillText('⚠ 在视野内!', player.x, player.y - 30);
   }
+
+  // 距离过远提示（按住F但不在偷窃距离内）
+  if (keys['f'] && gameState !== 'failed' && gameState !== 'success') {
+    const dxF = player.x - npc.x;
+    const dyF = player.y - npc.y;
+    const distF = Math.sqrt(dxF * dxF + dyF * dyF);
+    if (distF > CFG.stealDist) {
+      ctx.fillStyle = '#ff9800';
+      ctx.font = 'bold 13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('✘ 距离太远，无法偷窃！', player.x, player.y - 30);
+    }
+  }
 }
 
 function drawVisionCone() {
-  const halfFov = CFG.fov / 2;
+  // 使用动态视野角度（基础FOV + 警觉度增量）
+  const halfFov = (CFG.fov + npc.curFovBonus) / 2;
   const dist = CFG.viewDist;
+
+  // 根据警觉度层级选择视野颜色
+  const alertRatio = alertLevel / CFG.alertMax;
+  let fillColor, strokeColor;
+  if (alertRatio >= 0.6) {
+    // 高警觉：红色调，更醒目
+    fillColor = 'rgba(244,67,54,0.18)';
+    strokeColor = 'rgba(244,67,54,0.45)';
+  } else if (alertRatio >= 0.3) {
+    // 中警觉：橙色调
+    fillColor = 'rgba(255,152,0,0.14)';
+    strokeColor = 'rgba(255,152,0,0.38)';
+  } else {
+    // 低警觉：默认淡红色
+    fillColor = 'rgba(233,69,96,0.1)';
+    strokeColor = 'rgba(233,69,96,0.3)';
+  }
 
   ctx.save();
   ctx.translate(npc.x, npc.y);
 
   // 视野扇形
-  ctx.fillStyle = 'rgba(233,69,96,0.1)';
-  ctx.strokeStyle = 'rgba(233,69,96,0.3)';
+  ctx.fillStyle = fillColor;
+  ctx.strokeStyle = strokeColor;
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(0, 0);

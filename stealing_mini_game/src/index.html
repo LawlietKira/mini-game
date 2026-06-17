@@ -75,7 +75,7 @@
         <label>蓝色警戒倍率</label><input type="number" id="cfg-alert-blue" value="1.25" step="0.1">
         <label>紫色进度需求</label><input type="number" id="cfg-purple" value="85">
         <label>紫色警戒倍率</label><input type="number" id="cfg-alert-purple" value="1.45" step="0.1">
-        <label>橙色进度需求</label><input type="number" id="cfg-orange" value="120">
+        <label>橙色进度需求</label><input type="number" id="cfg-orange" value="105">
         <label>橙色警戒倍率</label><input type="number" id="cfg-alert-orange" value="1.7" step="0.1">
         <label>未知进度需求</label><input type="number" id="cfg-unknown" value="60">
         <label>未知警戒倍率</label><input type="number" id="cfg-alert-unknown" value="1.2" step="0.1">
@@ -86,9 +86,14 @@
         <label>警戒速度/秒</label><input type="number" id="cfg-alert-rate" value="10">
         <label>警戒值上限</label><input type="number" id="cfg-alert-max" value="100">
         <label>警戒回退速度/秒</label><input type="number" id="cfg-alert-decay" value="15">
-        <label>NPC视野角度(°)</label><input type="number" id="cfg-fov" value="90">
-        <label>NPC视野距离</label><input type="number" id="cfg-view-dist" value="200">
+        <label>NPC视野角度(°)</label><input type="number" id="cfg-fov" value="60">
+        <label>NPC视野距离</label><input type="number" id="cfg-view-dist" value="250">
         <label>NPC观察速度</label><input type="number" id="cfg-look-speed" value="1.2" step="0.1">
+        <label>靠近偷窃距离</label><input type="number" id="cfg-steal-dist" value="80">
+        <label>30%警觉转头倍率</label><input type="number" id="cfg-alert30-speed" value="1.4" step="0.1">
+        <label>30%警觉视野增量(°)</label><input type="number" id="cfg-alert30-fov" value="30">
+        <label>60%警觉转头倍率</label><input type="number" id="cfg-alert60-speed" value="2" step="0.1">
+        <label>60%警觉视野增量(°)</label><input type="number" id="cfg-alert60-fov" value="30">
       </div>
       <div style="display:flex;gap:8px;margin-top:10px;">
         <button id="btn-reset-config" class="btn-reset-config">还原默认配置</button>
