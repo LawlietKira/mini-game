@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>元素伤害曲线估算</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            min-height: 100vh;
+        }
+
+        .header {
+            text-align: center;
+            padding: 16px 0 8px;
+        }
+
+        .header h1 {
+            font-size: 22px;
+            color: #e0c36a;
+            letter-spacing: 2px;
+        }
+
+        .main {
+            display: flex;
+            gap: 12px;
+            padding: 0 16px 16px;
+            height: calc(100vh - 80px);
+        }
+
+        .chart-panel {
+            flex: 1;
+            background: #16213e;
+            border-radius: 10px;
+            padding: 8px;
+            position: relative;
+        }
+
+        #chart {
+            width: 100%;
+            height: 100%;
+        }
+
+        .side-panel {
+            width: 280px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .curve-card {
+            background: #16213e;
+            border-radius: 10px;
+            padding: 12px;
+            border-left: 4px solid;
+        }
+
+        .curve-card.fire {
+            border-left-color: #e74c3c;
+        }
+
+        .curve-card.earth {
+            border-left-color: #c08a4b;
+        }
+
+        .curve-card.water {
+            border-left-color: #3498db;
+        }
+
+        .curve-card.metal {
+            border-left-color: #f1c40f;
+        }
+
+        .curve-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .curve-header span {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .curve-header.fire span {
+            color: #e74c3c;
+        }
+
+        .curve-header.earth span {
+            color: #c08a4b;
+        }
+
+        .curve-header.water span {
+            color: #3498db;
+        }
+
+        .curve-header.metal span {
+            color: #f1c40f;
+        }
+
+        .curve-points {
+            font-size: 12px;
+            color: #aaa;
+            margin-bottom: 8px;
+        }
+
+        .curve-points table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .curve-points th,
+        .curve-points td {
+            padding: 3px 6px;
+            text-align: center;
+            border-bottom: 1px solid #2a2a4a;
+            font-size: 12px;
+        }
+
+        .curve-points th {
+            color: #888;
+            font-weight: normal;
+        }
+
+        .point-row {
+            transition: background 0.15s;
+        }
+
+        .point-row:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .point-row.selected {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .point-input {
+            width: 100%;
+            padding: 2px 4px;
+            border: 1px solid #3a3a5a;
+            border-radius: 3px;
+            background: rgba(0, 0, 0, 0.3);
+            color: #ccc;
+            font-size: 12px;
+            text-align: center;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        .point-input:focus {
+            outline: none;
+            border-color: #e0c36a;
+            background: rgba(0, 0, 0, 0.5);
+            color: #fff;
+        }
+
+        .curve-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .btn {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .btn:hover {
+            filter: brightness(1.2);
+        }
+
+        .btn-add {
+            background: #27ae60;
+            color: #fff;
+        }
+
+        .btn-del {
+            background: #e74c3c;
+            color: #fff;
+        }
+
+        .btn-save {
+            background: #2980b9;
+            color: #fff;
+        }
+
+        .btn-load {
+            background: #8e44ad;
+            color: #fff;
+        }
+
+        .btn-reset {
+            background: #7f8c8d;
+            color: #fff;
+        }
+
+        .global-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 4px;
+            flex-wrap: wrap;
+        }
+
+        .global-actions .btn {
+            flex: 1;
+            min-width: 60px;
+            padding: 8px 6px;
+            font-size: 13px;
+        }
+
+        .tip {
+            font-size: 11px;
+            color: #777;
+            text-align: center;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <h1>元素伤害曲线估算</h1>
+    </div>
+
+    <div class="main">
+        <div class="chart-panel">
+            <div id="chart"></div>
+        </div>
+
+        <div class="side-panel">
+            <!-- 火 -->
+            <div class="curve-card fire">
+                <div class="curve-header fire"><span>🔥 火</span></div>
+                <div class="curve-points">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>时间(s)</th>
+                                <th>伤害</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fire-points-tbody"></tbody>
+                    </table>
+                </div>
+                <div class="curve-actions">
+                    <button class="btn btn-add" onclick="addPoint('火')">＋点位</button>
+                    <button class="btn btn-del" onclick="removeSelectedPoint('火')">－点位</button>
+                </div>
+            </div>
+
+            <!-- 土 -->
+            <div class="curve-card earth">
+                <div class="curve-header earth"><span>🟫 土</span></div>
+                <div class="curve-points">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>时间(s)</th>
+                                <th>伤害</th>
+                            </tr>
+                        </thead>
+                        <tbody id="earth-points-tbody"></tbody>
+                    </table>
+                </div>
+                <div class="curve-actions">
+                    <button class="btn btn-add" onclick="addPoint('土')">＋点位</button>
+                    <button class="btn btn-del" onclick="removeSelectedPoint('土')">－点位</button>
+                </div>
+            </div>
+
+            <!-- 水 -->
+            <div class="curve-card water">
+                <div class="curve-header water"><span>💧 水</span></div>
+                <div class="curve-points">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>时间(s)</th>
+                                <th>伤害</th>
+                            </tr>
+                        </thead>
+                        <tbody id="water-points-tbody"></tbody>
+                    </table>
+                </div>
+                <div class="curve-actions">
+                    <button class="btn btn-add" onclick="addPoint('水')">＋点位</button>
+                    <button class="btn btn-del" onclick="removeSelectedPoint('水')">－点位</button>
+                </div>
+            </div>
+
+            <!-- 金 -->
+            <div class="curve-card metal">
+                <div class="curve-header metal"><span>✨ 金</span></div>
+                <div class="curve-points">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>时间(s)</th>
+                                <th>伤害</th>
+                            </tr>
+                        </thead>
+                        <tbody id="metal-points-tbody"></tbody>
+                    </table>
+                </div>
+                <div class="curve-actions">
+                    <button class="btn btn-add" onclick="addPoint('金')">＋点位</button>
+                    <button class="btn btn-del" onclick="removeSelectedPoint('金')">－点位</button>
+                </div>
+            </div>
+
+            <div class="global-actions">
+                <button class="btn btn-save" onclick="saveData()">💾 保存</button>
+                <button class="btn btn-load" onclick="loadData()">📂 加载</button>
+                <button class="btn btn-reset" onclick="resetData()">🔄 重置</button>
+            </div>
+            <div class="tip">💡 拖拽图表点位 / 直接修改右侧输入框<br>点击表格行可选中，配合「－点位」删除</div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 默认数据 ====================
+        const DEFAULT_DATA = {
+            "火": [
+                {
+                    "t": 0,
+                    "dmg": 0
+                },
+                {
+                    "t": 13,
+                    "dmg": 130
+                }
+            ],
+            "土": [
+                {
+                    "t": 0,
+                    "dmg": 0
+                },
+                {
+                    "t": 2,
+                    "dmg": 10
+                },
+                {
+                    "t": 4,
+                    "dmg": 27
+                },
+                {
+                    "t": 5,
+                    "dmg": 45
+                },
+                {
+                    "t": 6,
+                    "dmg": 65
+                },
+                {
+                    "t": 7,
+                    "dmg": 80
+                },
+                {
+                    "t": 9,
+                    "dmg": 95
+                },
+                {
+                    "t": 11,
+                    "dmg": 100
+                },
+                {
+                    "t": 13,
+                    "dmg": 110
+                }
+            ],
+            "水": [
+                {
+                    "t": 0,
+                    "dmg": 0
+                },
+                {
+                    "t": 4,
+                    "dmg": 30
+                },
+                {
+                    "t": 8,
+                    "dmg": 78
+                },
+                {
+                    "t": 13,
+                    "dmg": 120
+                }
+            ],
+            "金": [
+                {
+                    "t": 0,
+                    "dmg": 0
+                },
+                {
+                    "t": 4,
+                    "dmg": 25
+                },
+                {
+                    "t": 5,
+                    "dmg": 35
+                },
+                {
+                    "t": 6,
+                    "dmg": 50
+                },
+                {
+                    "t": 6.5,
+                    "dmg": 76.1
+                },
+                {
+                    "t": 11,
+                    "dmg": 102
+                },
+                {
+                    "t": 13,
+                    "dmg": 116
+                }
+            ]
+        };
+
+        const STORAGE_KEY = 'element-damage-curves';
+        const CURVE_COLORS = { '火': '#e74c3c', '土': '#c08a4b', '水': '#3498db', '金': '#f1c40f' };
+        const CURVE_IDS = { '火': 'fire', '土': 'earth', '水': 'water', '金': 'metal' };
+        const ELEMENTS = ['火', '土', '水', '金'];
+
+        // ==================== 状态 ====================
+        let curveData = {};           // 当前数据 { "火": [{t,dmg},...], ... }
+        let selectedPoints = {};      // { "火": index|null, ... }
+        let chartInstance = null;
+        let dragging = null;          // { element, index }
+
+        // ==================== 数据初始化 ====================
+        function loadDefaultData() {
+            curveData = JSON.parse(JSON.stringify(DEFAULT_DATA));
+            ELEMENTS.forEach(el => { selectedPoints[el] = null; });
+        }
+
+        function loadFromStorage() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return false;
+                const parsed = JSON.parse(raw);
+                for (const el of ELEMENTS) {
+                    if (!Array.isArray(parsed[el]) || parsed[el].length < 2) return false;
+                }
+                curveData = parsed;
+                ELEMENTS.forEach(el => { selectedPoints[el] = null; });
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function initData() {
+            if (!loadFromStorage()) {
+                loadDefaultData();
+            }
+        }
+
+        // ==================== ECharts 图表 ====================
+        function buildSeries() {
+            const series = [];
+            ELEMENTS.forEach(el => {
+                const pts = curveData[el];
+                if (!pts || pts.length === 0) return;
+                // 按时间排序
+                pts.sort((a, b) => a.t - b.t);
+                // 折线
+                series.push({
+                    name: el + '_line',
+                    type: 'line',
+                    data: pts.map(p => [p.t, p.dmg]),
+                    symbol: 'none',
+                    lineStyle: { color: CURVE_COLORS[el], width: 2.5 },
+                    z: 1,
+                    silent: true
+                });
+                // 拖拽点（散点图）
+                series.push({
+                    name: el + '_point',
+                    type: 'scatter',
+                    data: pts.map(p => [p.t, p.dmg]),
+                    symbolSize: 14,
+                    itemStyle: {
+                        color: CURVE_COLORS[el],
+                        borderColor: '#fff',
+                        borderWidth: 2,
+                        shadowBlur: 6,
+                        shadowColor: 'rgba(0,0,0,0.4)'
+                    },
+                    emphasis: {
+                        scale: 1.4,
+                        itemStyle: { shadowBlur: 12 }
+                    },
+                    z: 10
+                });
+            });
+            return series;
+        }
+
+        function buildOption() {
+            const maxT = Math.max(10, ...ELEMENTS.flatMap(el => curveData[el]?.map(p => p.t) || []));
+            const maxDmg = Math.max(10, ...ELEMENTS.flatMap(el => curveData[el]?.map(p => p.dmg) || []));
+
+            return {
+                title: {
+                    text: '元素伤害曲线估算',
+                    left: 'center',
+                    textStyle: { color: '#e0c36a', fontSize: 18, fontWeight: 'bold' }
+                },
+                tooltip: {
+                    trigger: 'item',
+                    formatter: function (p) {
+                        if (p.seriesName && p.seriesName.endsWith('_point')) {
+                            const el = p.seriesName.replace('_point', '');
+                            return `<b style="color:${CURVE_COLORS[el]}">${el}</b><br/>时间：${p.value[0]} s<br/>伤害：${p.value[1].toFixed(1)}`;
+                        }
+                        return '';
+                    },
+                    backgroundColor: 'rgba(20,30,50,0.95)',
+                    borderColor: '#444',
+                    textStyle: { color: '#eee' }
+                },
+                legend: {
+                    data: ELEMENTS.map(el => ({ name: el, icon: 'roundRect' })),
+                    bottom: 8,
+                    textStyle: { color: '#ccc', fontSize: 13 },
+                    selectedMode: false
+                },
+                grid: { top: 60, right: 30, bottom: 50, left: 55 },
+                xAxis: {
+                    name: '时间 (秒)',
+                    nameLocation: 'center',
+                    nameGap: 32,
+                    nameTextStyle: { color: '#aaa', fontSize: 13 },
+                    type: 'value',
+                    min: 0,
+                    max: Math.ceil(maxT * 1.15),
+                    axisLabel: { color: '#aaa', formatter: v => v.toFixed(0) },
+                    axisLine: { lineStyle: { color: '#555' } },
+                    splitLine: { lineStyle: { color: '#2a2a4a' } }
+                },
+                yAxis: {
+                    name: '伤害',
+                    nameTextStyle: { color: '#aaa', fontSize: 13 },
+                    type: 'value',
+                    min: 0,
+                    max: Math.ceil(maxDmg * 1.2),
+                    axisLabel: { color: '#aaa', formatter: v => Math.round(v).toString() },
+                    axisLine: { lineStyle: { color: '#555' } },
+                    splitLine: { lineStyle: { color: '#2a2a4a' } }
+                },
+                series: buildSeries()
+            };
+        }
+
+        function renderChart() {
+            if (!chartInstance) {
+                chartInstance = echarts.init(document.getElementById('chart'));
+                setupDragEvents();
+            }
+            chartInstance.setOption(buildOption(), { notMerge: true });
+            renderPointTables();
+        }
+
+        // ==================== 拖拽交互 ====================
+        function setupDragEvents() {
+            const chart = chartInstance;
+
+            chart.getZr().off('mousedown');
+            chart.getZr().off('mousemove');
+            chart.getZr().off('mouseup');
+            chart.getZr().off('mouseupoutside');
+
+            chart.getZr().on('mousedown', function (e) {
+                // 通过 topTarget 判断是否点击了散点元素
+                const el = e.topTarget;
+                if (!el || el.__dimIdx !== 0) {
+                    dragging = null;
+                    return;
+                }
+
+                const seriesIndex = el.__seriesIndex;
+                const dataIndex = el.__dataIndex;
+                if (seriesIndex == null || dataIndex == null) return;
+
+                const option = chart.getOption();
+                const series = option.series[seriesIndex];
+                if (!series || !series.name) return;
+
+                // 判断是哪个元素
+                let element = null;
+                for (const elName of ELEMENTS) {
+                    if (series.name === elName + '_point') {
+                        element = elName;
+                        break;
+                    }
+                }
+                if (!element) return;
+
+                dragging = { element, index: dataIndex };
+
+                // 选中当前拖拽的点位
+                selectedPoints[element] = dataIndex;
+            });
+
+            chart.getZr().on('mousemove', function (e) {
+                if (!dragging) return;
+
+                // 使用 grid 坐标系转换像素坐标
+                const point = chart.convertFromPixel('grid', [e.offsetX, e.offsetY]);
+                if (!point || point[0] == null || point[1] == null) return;
+
+                const newT = Math.max(0, +point[0].toFixed(1));
+                const newDmg = Math.max(0, +point[1].toFixed(1));
+
+                curveData[dragging.element][dragging.index].t = newT;
+                curveData[dragging.element][dragging.index].dmg = newDmg;
+
+                renderChart();
+            });
+
+            const endDrag = function () {
+                if (!dragging) return;
+                // 拖拽结束后按时间重新排序
+                curveData[dragging.element].sort((a, b) => a.t - b.t);
+                dragging = null;
+                renderChart();
+            };
+
+            chart.getZr().on('mouseup', endDrag);
+            chart.getZr().on('mouseupoutside', endDrag);
+        }
+
+        // ==================== 点位表格渲染 ====================
+        function renderPointTables() {
+            ELEMENTS.forEach(el => {
+                const tbody = document.getElementById(CURVE_IDS[el] + '-points-tbody');
+                const pts = curveData[el] || [];
+                const sorted = [...pts].sort((a, b) => a.t - b.t);
+                let html = '';
+                sorted.forEach((p, i) => {
+                    const sel = selectedPoints[el] === i ? ' selected' : '';
+                    html += `<tr class="point-row${sel}" onclick="selectPoint('${el}', ${i})" title="点击行选中 | 直接修改输入框数值">
+        <td><input class="point-input" type="number" step="0.1" min="0"
+          value="${p.t.toFixed(1)}" 
+          onchange="updatePointValue('${el}', ${i}, 't', this.value)"
+          onclick="event.stopPropagation()" /></td>
+        <td><input class="point-input" type="number" step="0.1" min="0"
+          value="${p.dmg.toFixed(1)}" 
+          onchange="updatePointValue('${el}', ${i}, 'dmg', this.value)"
+          onclick="event.stopPropagation()" /></td>
+      </tr>`;
+                });
+                tbody.innerHTML = html;
+            });
+        }
+
+        // 手动修改点位数值
+        function updatePointValue(element, index, field, rawValue) {
+            const val = parseFloat(rawValue);
+            if (isNaN(val) || val < 0) {
+                renderChart();  // 还原显示
+                return;
+            }
+            curveData[element][index][field] = +val.toFixed(1);
+            curveData[element].sort((a, b) => a.t - b.t);
+            renderChart();
+        }
+
+        function selectPoint(element, index) {
+            if (selectedPoints[element] === index) {
+                selectedPoints[element] = null;
+            } else {
+                selectedPoints[element] = index;
+            }
+            renderChart();
+        }
+
+        // ==================== 点位操作 ====================
+        function addPoint(element) {
+            if (!curveData[element]) curveData[element] = [];
+            const maxT = curveData[element].length > 0
+                ? Math.max(...curveData[element].map(p => p.t))
+                : 5;
+            const lastDmg = curveData[element].length > 0
+                ? curveData[element].reduce((a, b) => a.t > b.t ? a : b).dmg
+                : 50;
+            curveData[element].push({ t: +(maxT + 2).toFixed(1), dmg: +(lastDmg + 15).toFixed(1) });
+            curveData[element].sort((a, b) => a.t - b.t);
+            renderChart();
+        }
+
+        function removeSelectedPoint(element) {
+            if (selectedPoints[element] === null) {
+                alert('请先在右侧表格中点击选中要删除的点位');
+                return;
+            }
+            if (curveData[element].length <= 2) {
+                alert('每条曲线至少保留 2 个点位');
+                return;
+            }
+            curveData[element].splice(selectedPoints[element], 1);
+            selectedPoints[element] = null;
+            renderChart();
+        }
+
+        // ==================== 保存 / 加载 / 重置 ====================
+        function saveData() {
+            // 保存前排序
+            ELEMENTS.forEach(el => {
+                if (curveData[el]) curveData[el].sort((a, b) => a.t - b.t);
+            });
+            const jsonStr = JSON.stringify(curveData, null, 2);
+            localStorage.setItem(STORAGE_KEY, jsonStr);
+            console.log('===== 元素伤害曲线数据已保存 =====');
+            console.log(jsonStr);
+            console.log('===================================');
+            alert('保存成功！数据已存入浏览器缓存，并输出到控制台。');
+        }
+
+        function loadData() {
+            if (loadFromStorage()) {
+                renderChart();
+                alert('加载成功！已从浏览器缓存读取数据。');
+            } else {
+                alert('未找到缓存数据，已使用默认数据。');
+                loadDefaultData();
+                renderChart();
+            }
+        }
+
+        function resetData() {
+            if (confirm('确定要重置为默认数据吗？此操作不会清除已保存的缓存。')) {
+                loadDefaultData();
+                renderChart();
+            }
+        }
+
+        // ==================== 响应式 ====================
+        window.addEventListener('resize', function () {
+            if (chartInstance) chartInstance.resize();
+        });
+
+        // ==================== 启动 ====================
+        initData();
+        renderChart();
+    </script>
+</body>
+
+</html>
