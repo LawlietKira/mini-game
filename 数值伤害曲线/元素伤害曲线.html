@@ -229,6 +229,28 @@
             text-align: center;
             margin-top: 8px;
         }
+
+        .btn-toggle {
+            background: transparent;
+            border: 1px solid #555;
+            color: #ccc;
+            padding: 2px 7px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 1;
+            transition: all 0.2s;
+        }
+
+        .btn-toggle:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: #999;
+        }
+
+        .btn-toggle.off {
+            opacity: 0.3;
+            border-color: #444;
+        }
     </style>
 </head>
 
@@ -246,7 +268,7 @@
         <div class="side-panel">
             <!-- 火 -->
             <div class="curve-card fire">
-                <div class="curve-header fire"><span>🔥 火</span></div>
+                <div class="curve-header fire"><span>🔥 火</span><button class="btn btn-toggle" id="toggle-火" onclick="toggleCurveVisible('火')" title="显示/隐藏曲线">👁</button></div>
                 <div class="curve-points">
                     <table>
                         <thead>
@@ -266,7 +288,7 @@
 
             <!-- 土 -->
             <div class="curve-card earth">
-                <div class="curve-header earth"><span>🟫 土</span></div>
+                <div class="curve-header earth"><span>🟫 土</span><button class="btn btn-toggle" id="toggle-土" onclick="toggleCurveVisible('土')" title="显示/隐藏曲线">👁</button></div>
                 <div class="curve-points">
                     <table>
                         <thead>
@@ -286,7 +308,7 @@
 
             <!-- 水 -->
             <div class="curve-card water">
-                <div class="curve-header water"><span>💧 水</span></div>
+                <div class="curve-header water"><span>💧 水</span><button class="btn btn-toggle" id="toggle-水" onclick="toggleCurveVisible('水')" title="显示/隐藏曲线">👁</button></div>
                 <div class="curve-points">
                     <table>
                         <thead>
@@ -306,7 +328,7 @@
 
             <!-- 金 -->
             <div class="curve-card metal">
-                <div class="curve-header metal"><span>✨ 金</span></div>
+                <div class="curve-header metal"><span>✨ 金</span><button class="btn btn-toggle" id="toggle-金" onclick="toggleCurveVisible('金')" title="显示/隐藏曲线">👁</button></div>
                 <div class="curve-points">
                     <table>
                         <thead>
@@ -329,13 +351,13 @@
                 <button class="btn btn-load" onclick="loadData()">📂 加载</button>
                 <button class="btn btn-reset" onclick="resetData()">🔄 重置</button>
             </div>
-            <div class="tip">💡 拖拽图表点位 / 直接修改右侧输入框<br>点击表格行可选中，配合「－点位」删除</div>
+            <div class="tip">💡 拖拽图表点位 / 直接修改右侧输入框<br>点击表格行可选中，配合「－点位」删除<br>点击 👁 按钮或底部图例切换曲线显示</div>
         </div>
     </div>
 
     <script>
         // ==================== 默认数据 ====================
-        const DEFAULT_DATA = {"火":[{"t":0,"dmg":0},{"t":13,"dmg":130}],"土":[{"t":0,"dmg":0},{"t":2,"dmg":10},{"t":4,"dmg":27},{"t":5,"dmg":45},{"t":6,"dmg":65},{"t":7,"dmg":80},{"t":9,"dmg":95},{"t":11,"dmg":100},{"t":13,"dmg":110}],"水":[{"t":0,"dmg":0},{"t":4,"dmg":30},{"t":8,"dmg":72},{"t":13,"dmg":120}],"金":[{"t":0,"dmg":0},{"t":4,"dmg":25},{"t":5,"dmg":35},{"t":6,"dmg":50},{"t":8,"dmg":85},{"t":11,"dmg":115},{"t":13,"dmg":138}]};
+        const DEFAULT_DATA = {"火":[{"t":0,"dmg":0},{"t":2,"dmg":15},{"t":4,"dmg":35},{"t":6.5,"dmg":65},{"t":8,"dmg":85},{"t":10,"dmg":105},{"t":13,"dmg":130}],"土":[{"t":0,"dmg":0},{"t":2,"dmg":10},{"t":4,"dmg":27},{"t":5,"dmg":45},{"t":6,"dmg":65},{"t":7,"dmg":80},{"t":9,"dmg":95},{"t":11,"dmg":100},{"t":13,"dmg":110}],"水":[{"t":0,"dmg":0},{"t":4,"dmg":30},{"t":8,"dmg":78},{"t":13,"dmg":120}],"金":[{"t":0,"dmg":0},{"t":3,"dmg":16},{"t":5,"dmg":32},{"t":7,"dmg":63},{"t":9,"dmg":93},{"t":11,"dmg":115},{"t":13,"dmg":140}]}
 
         const STORAGE_KEY = 'element-damage-curves';
         const CURVE_COLORS = { '火': '#e74c3c', '土': '#c08a4b', '水': '#3498db', '金': '#f1c40f' };
@@ -345,6 +367,7 @@
         // ==================== 状态 ====================
         let curveData = {};           // 当前数据 { "火": [{t,dmg},...], ... }
         let selectedPoints = {};      // { "火": index|null, ... }
+        let curveVisible = { '火': true, '土': true, '水': true, '金': true };
         let chartInstance = null;
         let dragging = null;          // { element, index }
 
@@ -386,7 +409,7 @@
                 pts.sort((a, b) => a.t - b.t);
                 // 折线
                 series.push({
-                    name: el + '_line',
+                    name: el,
                     type: 'line',
                     data: pts.map(p => [p.t, p.dmg]),
                     symbol: 'none',
@@ -396,7 +419,7 @@
                 });
                 // 拖拽点（散点图）
                 series.push({
-                    name: el + '_point',
+                    name: el,
                     type: 'scatter',
                     data: pts.map(p => [p.t, p.dmg]),
                     symbolSize: 7,
@@ -430,8 +453,8 @@
                 tooltip: {
                     trigger: 'item',
                     formatter: function (p) {
-                        if (p.seriesName && p.seriesName.endsWith('_point')) {
-                            const el = p.seriesName.replace('_point', '');
+                        if (p.seriesType === 'scatter') {
+                            const el = p.seriesName;
                             return `<b style="color:${CURVE_COLORS[el]}">${el}</b><br/>时间：${p.value[0]} s<br/>伤害：${p.value[1].toFixed(1)}`;
                         }
                         return '';
@@ -444,7 +467,8 @@
                     data: ELEMENTS.map(el => ({ name: el, icon: 'roundRect' })),
                     bottom: 8,
                     textStyle: { color: '#ccc', fontSize: 13 },
-                    selectedMode: false
+                    selectedMode: true,
+                    selected: { ...curveVisible }
                 },
                 grid: { top: 60, right: 30, bottom: 50, left: 55 },
                 xAxis: {
@@ -477,9 +501,21 @@
             if (!chartInstance) {
                 chartInstance = echarts.init(document.getElementById('chart'));
                 setupDragEvents();
+            } else {
+                // 保留当前图例选中状态
+                const currentOption = chartInstance.getOption();
+                const legendSelected = currentOption.legend && currentOption.legend[0] && currentOption.legend[0].selected;
+                if (legendSelected) {
+                    for (const el of ELEMENTS) {
+                        if (el in legendSelected) {
+                            curveVisible[el] = legendSelected[el];
+                        }
+                    }
+                }
             }
             chartInstance.setOption(buildOption(), { notMerge: true });
             renderPointTables();
+            updateToggleButtons();
         }
 
         // ==================== 拖拽交互 ====================
@@ -505,17 +541,10 @@
 
                 const option = chart.getOption();
                 const series = option.series[seriesIndex];
-                if (!series || !series.name) return;
+                if (!series || !series.name || series.type !== 'scatter') return;
 
-                // 判断是哪个元素
-                let element = null;
-                for (const elName of ELEMENTS) {
-                    if (series.name === elName + '_point') {
-                        element = elName;
-                        break;
-                    }
-                }
-                if (!element) return;
+                const element = series.name;
+                if (!ELEMENTS.includes(element)) return;
 
                 dragging = { element, index: dataIndex };
 
@@ -624,16 +653,44 @@
             renderChart();
         }
 
+        // ==================== 曲线显示/隐藏 ====================
+        function toggleCurveVisible(element) {
+            if (!chartInstance) return;
+            chartInstance.dispatchAction({ type: 'legendToggleSelect', name: element });
+            // 同步状态
+            const currentOption = chartInstance.getOption();
+            const legendSelected = currentOption.legend && currentOption.legend[0] && currentOption.legend[0].selected;
+            if (legendSelected && element in legendSelected) {
+                curveVisible[element] = legendSelected[element];
+            }
+            updateToggleButtons();
+        }
+
+        function updateToggleButtons() {
+            ELEMENTS.forEach(el => {
+                const btn = document.getElementById('toggle-' + el);
+                if (btn) {
+                    if (curveVisible[el]) {
+                        btn.classList.remove('off');
+                        btn.textContent = '👁';
+                    } else {
+                        btn.classList.add('off');
+                        btn.textContent = '🚫';
+                    }
+                }
+            });
+        }
+
         // ==================== 保存 / 加载 / 重置 ====================
         function saveData() {
             // 保存前排序
             ELEMENTS.forEach(el => {
                 if (curveData[el]) curveData[el].sort((a, b) => a.t - b.t);
             });
-            const jsonStr = JSON.stringify(curveData, null, 2);
+            const jsonStr = JSON.stringify(curveData);
             localStorage.setItem(STORAGE_KEY, jsonStr);
             console.log('===== 元素伤害曲线数据已保存 =====');
-            console.log(JSON.stringify(jsonStr));
+            console.log(jsonStr);
             console.log('===================================');
             alert('保存成功！数据已存入浏览器缓存，并输出到控制台。');
         }
