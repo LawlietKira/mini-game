@@ -1,0 +1,71 @@
+{
+  "elements": [
+    {
+      "id": "fire",
+      "name": "火元素",
+      "color": "#E74C3C",
+      "icon": "🔥",
+      "coefficients": {
+        "attack": 0.5,
+        "fireAttack": 1,
+        "fireResist": 0.6,
+        "battleSpiritRecovery": 0.25,
+        "battleSpiritCap": 8
+      }
+    },
+    {
+      "id": "earth",
+      "name": "土元素",
+      "color": "#D4A017",
+      "icon": "🪨",
+      "coefficients": {
+        "attack": 0.5,
+        "earthAttack": 1,
+        "earthResist": 0.6,
+        "stunDamageBonus": 0.5,
+        "defense": 5
+      }
+    },
+    {
+      "id": "metal",
+      "name": "金元素",
+      "color": "#F1C40F",
+      "icon": "🥇",
+      "coefficients": {
+        "attack": 0.5,
+        "metalAttack": 1,
+        "metalResist": 0.6,
+        "critRate": 0.5,
+        "executionDamageBonus": 0.75
+      }
+    },
+    {
+      "id": "water",
+      "name": "水元素",
+      "color": "#3498DB",
+      "icon": "💧",
+      "coefficients": {
+        "attack": 0.5,
+        "waterAttack": 1,
+        "waterResist": 0.6,
+        "qiRecovery": 0.8,
+        "qiCap": 0.06667
+      }
+    },
+    {
+      "id": "wood",
+      "name": "木元素",
+      "color": "#2ECC71",
+      "icon": "🌿",
+      "coefficients": {
+        "hp": 5,
+        "fireResist": 0.15,
+        "earthResist": 0.15,
+        "metalResist": 0.15,
+        "waterResist": 0.15,
+        "woodResist": 0.75,
+        "hpRecovery": 0.125
+      }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "fireResist": { "name": "火元素抗性", "max": 75 },
+  "earthResist": { "name": "土元素抗性", "max": 75 },
+  "metalResist": { "name": "金元素抗性", "max": 75 },
+  "waterResist": { "name": "水元素抗性", "max": 75 },
+  "woodResist": { "name": "木元素抗性", "max": 75 },
+  "battleSpiritCap": { "name": "战意上限", "max": 800 },
+  "qiCap": { "name": "真气上限", "max": 6 }
+}

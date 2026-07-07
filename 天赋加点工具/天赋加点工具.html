@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>属性加点工具</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #1e293b;
+      --panel-light: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-hover: #0ea5e9;
+      --danger: #ef4444;
+      --danger-hover: #dc2626;
+      --success: #22c55e;
+      --border: #475569;
+      --highlight: rgba(56, 189, 248, 0.2);
+      --highlight-border: #38bdf8;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      padding: 6px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    h1 { margin: 0; font-size: 18px; }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .total-points {
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    .total-points strong {
+      color: var(--accent);
+      font-size: 15px;
+    }
+
+    button {
+      border: none;
+      padding: 5px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.2s, transform 0.1s;
+      font-family: inherit;
+    }
+
+    button:active { transform: translateY(1px); }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #0f172a;
+      font-weight: bold;
+    }
+
+    .btn-primary:hover { background: var(--accent-hover); }
+
+    .btn-danger {
+      background: var(--danger);
+      color: white;
+    }
+
+    .btn-danger:hover { background: var(--danger-hover); }
+
+    .btn-add {
+      width: 22px;
+      height: 22px;
+      padding: 0;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #0f172a;
+      font-size: 15px;
+      line-height: 22px;
+      font-weight: bold;
+    }
+
+    .btn-add:hover:not(:disabled) { background: var(--accent-hover); }
+
+    .btn-add:disabled {
+      background: var(--panel-light);
+      color: var(--text-muted);
+      cursor: not-allowed;
+    }
+
+    .btn-sub {
+      width: 22px;
+      height: 22px;
+      padding: 0;
+      border-radius: 50%;
+      background: var(--danger);
+      color: white;
+      font-size: 15px;
+      line-height: 22px;
+      font-weight: bold;
+    }
+
+    .btn-sub:hover { background: var(--danger-hover); }
+
+    .btn-row {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: 220px 1fr 1fr;
+      gap: 10px;
+      padding: 10px;
+      max-width: 100%;
+      margin: 0 auto;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      box-shadow: var(--shadow);
+    }
+
+    .panel-title {
+      font-size: 14px;
+      font-weight: bold;
+      margin: 0 0 8px 0;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+      color: var(--accent);
+    }
+
+    .element-list {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .element-card {
+      background: var(--panel-light);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: border-color 0.2s, background 0.2s;
+      cursor: default;
+    }
+
+    .element-card:hover {
+      border-color: var(--accent);
+    }
+
+    .element-icon {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+      flex-shrink: 0;
+    }
+
+    .element-info {
+      flex: 1;
+    }
+
+    .element-name {
+      font-weight: bold;
+      font-size: 13px;
+    }
+
+    .element-points {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    .element-points .preview {
+      color: var(--success);
+      font-weight: bold;
+    }
+
+    .element-max {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .attr-group {
+      margin-bottom: 10px;
+    }
+
+    .attr-group-title {
+      font-size: 12px;
+      font-weight: bold;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+      padding-left: 6px;
+      border-left: 2px solid var(--accent);
+    }
+
+    .attr-list {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .attr-item {
+      background: var(--panel-light);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 4px 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background 0.2s, border-color 0.2s;
+      cursor: help;
+      position: relative;
+    }
+
+    .attr-item.highlight {
+      background: var(--highlight);
+      border-color: var(--highlight-border);
+    }
+
+    .attr-name {
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .attr-value {
+      font-family: "Consolas", "Monaco", monospace;
+      font-size: 13px;
+      font-weight: bold;
+      color: var(--text);
+    }
+
+    .attr-value .preview {
+      color: var(--success);
+      margin-left: 2px;
+    }
+
+    .attr-value .dim {
+      color: var(--text-muted);
+      font-weight: normal;
+      font-size: 11px;
+    }
+
+    .tooltip {
+      position: fixed;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      padding: 10px 12px;
+      max-width: 280px;
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--text);
+      pointer-events: none;
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.15s;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+    }
+
+    .tooltip.visible { opacity: 1; }
+
+    .tooltip .title {
+      font-weight: bold;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+
+    .tooltip .formula {
+      color: var(--success);
+      margin-top: 6px;
+      font-size: 12px;
+    }
+
+    .empty-msg {
+      color: var(--text-muted);
+      font-size: 14px;
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    @media (max-width: 1100px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>属性加点工具</h1>
+    <div class="header-actions">
+      <span class="total-points">已确认加点：<strong id="totalPoints">0</strong> / <strong id="totalMaxPoints">500</strong></span>
+      <button id="confirmBtn" class="btn-primary">确认加点</button>
+      <button id="resetBtn" class="btn-danger">重置</button>
+    </div>
+  </header>
+
+  <main id="main">
+    <div id="loading" class="empty-msg" style="grid-column: 1 / -1;">正在加载配置...</div>
+  </main>
+
+  <div id="tooltip" class="tooltip"></div>
+
+  <script>
+    const STORAGE_KEY = 'talentAllocationTool_v1';
+    const MAX_ELEMENT_POINTS = 50;
+    const TOTAL_POINTS = MAX_ELEMENT_POINTS * 5;
+
+    const App = {
+      elementConfig: null,
+      attrInit: null,
+      attrMax: null,
+      computedAttr: null,
+      state: {
+        confirmed: { elementPoints: {}, attributes: {} },
+        preview: { fire: 0, earth: 0, metal: 0, water: 0, wood: 0 }
+      },
+      elementAffected: {},
+
+      init() {
+        try {
+          this.loadConfigs();
+          this.initState();
+          this.loadFromStorage();
+          this.computeElementAffected();
+          this.render();
+          document.getElementById('totalMaxPoints').textContent = TOTAL_POINTS;
+          this.bindEvents();
+        } catch (err) {
+          document.getElementById('main').innerHTML = `<div class="empty-msg" style="grid-column: 1 / -1;">加载配置失败：${err.message}</div>`;
+        }
+      },
+
+      loadConfigs() {
+        this.elementConfig = {"elements":[{"id":"fire","name":"火元素","color":"#E74C3C","icon":"🔥","coefficients":{"attack":0.5,"fireAttack":1,"fireResist":0.6,"battleSpiritRecovery":0.25,"battleSpiritCap":8}},{"id":"earth","name":"土元素","color":"#D4A017","icon":"🪨","coefficients":{"attack":0.5,"earthAttack":1,"earthResist":0.6,"stunDamageBonus":0.5,"defense":5}},{"id":"metal","name":"金元素","color":"#F1C40F","icon":"🥇","coefficients":{"attack":0.5,"metalAttack":1,"metalResist":0.6,"critRate":0.5,"executionDamageBonus":0.75}},{"id":"water","name":"水元素","color":"#3498DB","icon":"💧","coefficients":{"attack":0.5,"waterAttack":1,"waterResist":0.6,"qiRecovery":0.8,"qiCap":0.06667}},{"id":"wood","name":"木元素","color":"#2ECC71","icon":"🌿","coefficients":{"hp":5,"fireResist":0.15,"earthResist":0.15,"metalResist":0.15,"waterResist":0.15,"woodResist":0.75,"hpRecovery":0.125}}]};
+
+        this.attrInit = {"attack":{"name":"攻击力","init":20,"desc":"角色的基础攻击力，影响所有伤害输出"},"hp":{"name":"生命值","init":90,"desc":"角色的最大生命值"},"defense":{"name":"防御力","init":0,"desc":"减少受到的伤害，减伤率 = 防御力 / (防御力 + 500)","formula":"def/(def+500)","formulaUnit":"%"},"fireAttack":{"name":"火元素攻击","init":5,"desc":"提升火元素技能的伤害基础值"},"fireDamageBonus":{"name":"火元素伤害加成","init":0,"desc":"百分比提升火元素伤害（不受元素加点影响）","displayOnly":true},"fireResist":{"name":"火元素抗性","init":0,"desc":"减免火元素伤害，减免率 = 抗性 × 1%","formula":"resist*1","formulaUnit":"%"},"firePenetration":{"name":"火元素穿透","init":0,"desc":"无视目标一定比例的火元素抗性（不受元素加点影响）","displayOnly":true},"earthAttack":{"name":"土元素攻击","init":5,"desc":"提升土元素技能的伤害基础值"},"earthDamageBonus":{"name":"土元素伤害加成","init":0,"desc":"百分比提升土元素伤害（不受元素加点影响）","displayOnly":true},"earthResist":{"name":"土元素抗性","init":0,"desc":"减免土元素伤害，减免率 = 抗性 × 1%","formula":"resist*1","formulaUnit":"%"},"earthPenetration":{"name":"土元素穿透","init":0,"desc":"无视目标一定比例的土元素抗性（不受元素加点影响）","displayOnly":true},"metalAttack":{"name":"金元素攻击","init":5,"desc":"提升金元素技能的伤害基础值"},"metalDamageBonus":{"name":"金元素伤害加成","init":0,"desc":"百分比提升金元素伤害（不受元素加点影响）","displayOnly":true},"metalResist":{"name":"金元素抗性","init":0,"desc":"减免金元素伤害，减免率 = 抗性 × 1%","formula":"resist*1","formulaUnit":"%"},"metalPenetration":{"name":"金元素穿透","init":0,"desc":"无视目标一定比例的金元素抗性（不受元素加点影响）","displayOnly":true},"waterAttack":{"name":"水元素攻击","init":5,"desc":"提升水元素技能的伤害基础值"},"waterDamageBonus":{"name":"水元素伤害加成","init":0,"desc":"百分比提升水元素伤害（不受元素加点影响）","displayOnly":true},"waterResist":{"name":"水元素抗性","init":0,"desc":"减免水元素伤害，减免率 = 抗性 × 1%","formula":"resist*1","formulaUnit":"%"},"waterPenetration":{"name":"水元素穿透","init":0,"desc":"无视目标一定比例的水元素抗性（不受元素加点影响）","displayOnly":true},"woodResist":{"name":"木元素抗性","init":0,"desc":"减免木元素伤害，减免率 = 抗性 × 1%","formula":"resist*1","formulaUnit":"%"},"battleSpiritRecovery":{"name":"战意恢复效率","init":0,"desc":"战意值的恢复速度"},"battleSpiritCap":{"name":"战意上限","init":200,"desc":"战意值的最大上限"},"qiRecovery":{"name":"真气恢复速度","init":0,"desc":"真气值的恢复速度"},"qiCap":{"name":"真气上限","init":3,"roundType":"floor","desc":"真气值的最大上限，显示时向下取整"},"critRate":{"name":"暴击率","init":5,"unit":"%","roundType":"percent2","desc":"造成暴击的概率"},"critDamage":{"name":"暴击伤害","init":150,"unit":"%","roundType":"percent2","desc":"暴击时的伤害倍率（不受元素加点影响）","displayOnly":true},"stunDamageBonus":{"name":"眩晕伤害加成","init":0,"unit":"%","desc":"对眩晕状态敌人的额外伤害加成"},"executionDamageBonus":{"name":"处决伤害加成","init":0,"unit":"%","desc":"处决时的额外伤害加成"},"hpRecovery":{"name":"生命恢复速度","init":0,"desc":"生命值的自然恢复速度"},"ultimateEnergyRecovery":{"name":"大招能量恢复效率","init":0,"desc":"大招能量的恢复效率（不受元素加点影响）","displayOnly":true}};
+
+        this.attrMax = {"fireResist":{"name":"火元素抗性","max":75},"earthResist":{"name":"土元素抗性","max":75},"metalResist":{"name":"金元素抗性","max":75},"waterResist":{"name":"水元素抗性","max":75},"woodResist":{"name":"木元素抗性","max":75},"battleSpiritCap":{"name":"战意上限","max":800},"qiCap":{"name":"真气上限","max":6}};
+
+        this.computedAttr = {"fireIntensity":{"name":"火元素强度","formula":"attack + fireAttack","desc":"攻击力 + 火元素攻击，影响火元素基础伤害"},"earthIntensity":{"name":"土元素强度","formula":"attack + earthAttack","desc":"攻击力 + 土元素攻击，影响土元素基础伤害"},"metalIntensity":{"name":"金元素强度","formula":"attack + metalAttack","desc":"攻击力 + 金元素攻击，影响金元素基础伤害"},"waterIntensity":{"name":"水元素强度","formula":"attack + waterAttack","desc":"攻击力 + 水元素攻击，影响水元素基础伤害"}};
+      },
+
+      initState() {
+        const initialPoints = {};
+        this.elementConfig.elements.forEach(el => { initialPoints[el.id] = 0; });
+
+        const initialAttributes = {};
+        Object.keys(this.attrInit).forEach(key => {
+          initialAttributes[key] = this.attrInit[key].init;
+        });
+
+        this.state.confirmed = {
+          elementPoints: { ...initialPoints },
+          attributes: { ...initialAttributes }
+        };
+        this.state.preview = { ...initialPoints };
+      },
+
+      loadFromStorage() {
+        try {
+          const saved = localStorage.getItem(STORAGE_KEY);
+          if (!saved) return;
+          const data = JSON.parse(saved);
+          if (data && data.version === 1 && data.elementPoints && data.attributes) {
+            this.state.confirmed.elementPoints = { ...this.state.confirmed.elementPoints, ...data.elementPoints };
+            this.state.confirmed.attributes = { ...this.state.confirmed.attributes, ...data.attributes };
+          }
+        } catch (e) {
+          console.warn('localStorage 读取失败', e);
+        }
+      },
+
+      saveToStorage() {
+        try {
+          const data = {
+            version: 1,
+            elementPoints: { ...this.state.confirmed.elementPoints },
+            attributes: { ...this.state.confirmed.attributes }
+          };
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        } catch (e) {
+          console.warn('localStorage 保存失败', e);
+        }
+      },
+
+      computeElementAffected() {
+        this.elementAffected = {};
+        this.elementConfig.elements.forEach(el => {
+          this.elementAffected[el.id] = new Set(Object.keys(el.coefficients));
+        });
+      },
+
+      calculateDisplayAttributes() {
+        return this.calculateAttributes(true);
+      },
+
+      calculateConfirmedAttributes() {
+        return this.calculateAttributes(false);
+      },
+
+      evaluateComputed(key, attrs) {
+        const cfg = this.computedAttr[key];
+        if (!cfg) return 0;
+        try {
+          const formula = cfg.formula;
+          const scope = { ...attrs };
+          const func = new Function(...Object.keys(scope), `return (${formula});`);
+          return func(...Object.values(scope));
+        } catch (e) {
+          return 0;
+        }
+      },
+
+      formatValue(key, value) {
+        const cfg = this.attrInit[key];
+        const roundType = cfg ? cfg.roundType : null;
+
+        let num = value;
+        if (roundType === 'floor') {
+          return Math.floor(num).toString();
+        }
+        if (roundType === 'percent2' || (cfg && cfg.unit === '%')) {
+          return num.toFixed(2) + '%';
+        }
+        return num.toFixed(2);
+      },
+
+      formatPreviewDelta(key, value) {
+        const sign = value >= 0 ? '+' : '';
+        return sign + this.formatValue(key, value);
+      },
+
+      getAttributeValue(key, includePreview = true) {
+        if (this.computedAttr[key]) {
+          const confirmedAttrs = this.calculateConfirmedAttributes();
+          const displayAttrs = this.calculateDisplayAttributes();
+          if (includePreview) {
+            return this.evaluateComputed(key, displayAttrs);
+          } else {
+            return this.evaluateComputed(key, confirmedAttrs);
+          }
+        }
+        const attrs = includePreview ? this.calculateDisplayAttributes() : this.calculateConfirmedAttributes();
+        return attrs[key] || 0;
+      },
+
+      isDisplayOnly(key) {
+        return this.attrInit[key] && this.attrInit[key].displayOnly;
+      },
+
+      isAffectedByElement(key, elementId) {
+        return this.elementAffected[elementId] && this.elementAffected[elementId].has(key);
+      },
+
+      isElementDisabled(elementId) {
+        const currentPoints = this.state.confirmed.elementPoints[elementId] + this.state.preview[elementId];
+        return currentPoints >= MAX_ELEMENT_POINTS;
+      },
+
+      calculateAttributes(includePreview, overridePreview) {
+        const attrs = {};
+        Object.keys(this.attrInit).forEach(key => {
+          attrs[key] = this.attrInit[key].init;
+        });
+        const points = {};
+        this.elementConfig.elements.forEach(el => {
+          const previewDelta = overridePreview ? overridePreview[el.id] : this.state.preview[el.id];
+          points[el.id] = this.state.confirmed.elementPoints[el.id] + (includePreview ? previewDelta : 0);
+        });
+
+        this.elementConfig.elements.forEach(el => {
+          const p = points[el.id];
+          if (!p) return;
+          Object.entries(el.coefficients).forEach(([attrKey, coeff]) => {
+            attrs[attrKey] = (attrs[attrKey] || 0) + p * coeff;
+          });
+        });
+
+        for (const [key, maxCfg] of Object.entries(this.attrMax)) {
+          if (attrs[key] !== undefined) {
+            attrs[key] = Math.min(attrs[key], maxCfg.max);
+          }
+        }
+
+        return attrs;
+      },
+
+      addPoint(elementId) {
+        if (this.isElementDisabled(elementId)) return;
+        this.state.preview[elementId] += 1;
+        this.render();
+      },
+
+      subPoint(elementId) {
+        if (this.state.preview[elementId] <= 0) return;
+        this.state.preview[elementId] -= 1;
+        this.render();
+      },
+
+      confirmPoints() {
+        const displayAttrs = this.calculateDisplayAttributes();
+        for (const [key, maxCfg] of Object.entries(this.attrMax)) {
+          if (displayAttrs[key] > maxCfg.max) {
+            alert(`${maxCfg.name} 超过上限 ${maxCfg.max}，无法确认。请调整加点。`);
+            return;
+          }
+        }
+
+        this.elementConfig.elements.forEach(el => {
+          this.state.confirmed.elementPoints[el.id] += this.state.preview[el.id];
+          this.state.preview[el.id] = 0;
+        });
+
+        this.state.confirmed.attributes = displayAttrs;
+        this.saveToStorage();
+        this.render();
+      },
+
+      resetAll() {
+        if (!confirm('确定要重置所有加点吗？此操作将清除已保存的数据。')) return;
+        this.initState();
+        localStorage.removeItem(STORAGE_KEY);
+        this.render();
+      },
+
+      render() {
+        const main = document.getElementById('main');
+        main.innerHTML = '';
+
+        const leftPanel = this.createLeftPanel();
+        const middlePanel = this.createMiddlePanel();
+        const rightPanel = this.createRightPanel();
+
+        main.appendChild(leftPanel);
+        main.appendChild(middlePanel);
+        main.appendChild(rightPanel);
+
+        const totalConfirmed = Object.values(this.state.confirmed.elementPoints).reduce((a, b) => a + b, 0);
+        document.getElementById('totalPoints').textContent = totalConfirmed;
+      },
+
+      createLeftPanel() {
+        const panel = document.createElement('div');
+        panel.className = 'panel';
+        panel.innerHTML = '<div class="panel-title">基础属性</div>';
+
+        const list = document.createElement('div');
+        list.className = 'element-list';
+
+        this.elementConfig.elements.forEach(el => {
+          const confirmed = this.state.confirmed.elementPoints[el.id];
+          const preview = this.state.preview[el.id];
+          const total = confirmed + preview;
+          const disabled = this.isElementDisabled(el.id);
+
+          const card = document.createElement('div');
+          card.className = 'element-card';
+          card.dataset.elementId = el.id;
+          card.style.borderLeft = `4px solid ${el.color}`;
+
+          card.innerHTML = `
+            <div class="element-icon" style="background:${el.color}20;color:${el.color}">${el.icon}</div>
+            <div class="element-info">
+              <div class="element-name" style="color:${el.color}">${el.name}</div>
+              <div class="element-points">
+                已加点：${confirmed}${preview > 0 ? `<span class="preview">+${preview}</span>` : ''}
+              </div>
+              <div class="element-max">上限：${total} / ${MAX_ELEMENT_POINTS}</div>
+            </div>
+            <div class="btn-row">
+              ${preview > 0 ? '<button class="btn-sub">-</button>' : ''}
+              <button class="btn-add" ${disabled ? 'disabled' : ''}>+</button>
+            </div>
+          `;
+
+          card.querySelector('.btn-add').addEventListener('click', () => this.addPoint(el.id));
+          if (preview > 0) {
+            card.querySelector('.btn-sub').addEventListener('click', () => this.subPoint(el.id));
+          }
+          card.addEventListener('mouseenter', () => this.highlightElement(el.id, true));
+          card.addEventListener('mouseleave', () => this.highlightElement(el.id, false));
+
+          list.appendChild(card);
+        });
+
+        panel.appendChild(list);
+        return panel;
+      },
+
+      createMiddlePanel() {
+        const panel = document.createElement('div');
+        panel.className = 'panel';
+        panel.innerHTML = '<div class="panel-title">元素属性</div>';
+
+        const groups = [
+          { elementId: 'fire', keys: ['fireIntensity', 'fireAttack', 'fireDamageBonus', 'fireResist', 'firePenetration'] },
+          { elementId: 'earth', keys: ['earthIntensity', 'earthAttack', 'earthDamageBonus', 'earthResist', 'earthPenetration'] },
+          { elementId: 'metal', keys: ['metalIntensity', 'metalAttack', 'metalDamageBonus', 'metalResist', 'metalPenetration'] },
+          { elementId: 'water', keys: ['waterIntensity', 'waterAttack', 'waterDamageBonus', 'waterResist', 'waterPenetration'] },
+          { elementId: 'wood', keys: ['woodResist'] }
+        ];
+
+        groups.forEach(group => {
+          const elCfg = this.elementConfig.elements.find(e => e.id === group.elementId);
+          const groupDiv = document.createElement('div');
+          groupDiv.className = 'attr-group';
+          groupDiv.innerHTML = `<div class="attr-group-title" style="border-color:${elCfg.color};color:${elCfg.color}">${elCfg.name}相关</div>`;
+
+          const list = document.createElement('div');
+          list.className = 'attr-list';
+
+          group.keys.forEach(key => {
+            list.appendChild(this.createAttrItem(key, group.elementId));
+          });
+
+          groupDiv.appendChild(list);
+          panel.appendChild(groupDiv);
+        });
+
+        return panel;
+      },
+
+      createRightPanel() {
+        const panel = document.createElement('div');
+        panel.className = 'panel';
+        panel.innerHTML = '<div class="panel-title">其他属性</div>';
+
+        const groups = [
+          { title: '标准属性', keys: ['attack', 'hp', 'defense'] },
+          { title: '战意属性', keys: ['battleSpiritRecovery', 'battleSpiritCap'] },
+          { title: '真气属性', keys: ['qiRecovery', 'qiCap'] },
+          { title: '其他属性', keys: ['critRate', 'critDamage', 'stunDamageBonus', 'executionDamageBonus', 'hpRecovery', 'ultimateEnergyRecovery'] }
+        ];
+
+        groups.forEach(group => {
+          const groupDiv = document.createElement('div');
+          groupDiv.className = 'attr-group';
+          groupDiv.innerHTML = `<div class="attr-group-title">${group.title}</div>`;
+
+          const list = document.createElement('div');
+          list.className = 'attr-list';
+
+          group.keys.forEach(key => {
+            list.appendChild(this.createAttrItem(key, null));
+          });
+
+          groupDiv.appendChild(list);
+          panel.appendChild(groupDiv);
+        });
+
+        return panel;
+      },
+
+      createAttrItem(key, currentElementId) {
+        const item = document.createElement('div');
+        item.className = 'attr-item';
+        item.dataset.attrKey = key;
+        item.dataset.elementId = currentElementId || '';
+
+        const cfg = this.attrInit[key] || this.computedAttr[key] || { name: key, desc: '' };
+        const isComputed = !!this.computedAttr[key];
+
+        const confirmedValue = this.getAttributeValue(key, false);
+        const displayValue = this.getAttributeValue(key, true);
+        const previewDelta = displayValue - confirmedValue;
+
+        const hasPreview = Math.abs(previewDelta) > 0.0001;
+        let valueHtml = '';
+        if (hasPreview) {
+          valueHtml = `<span class="dim">${this.formatValue(key, confirmedValue)}</span><span class="preview">${this.formatPreviewDelta(key, previewDelta)}</span>`;
+        } else {
+          valueHtml = this.formatValue(key, displayValue);
+        }
+
+        item.innerHTML = `
+          <div class="attr-name">
+            ${cfg.name}${isComputed ? '<span class="dim">（计算）</span>' : ''}
+          </div>
+          <div class="attr-value">${valueHtml}</div>
+        `;
+
+        this.bindTooltip(item, key, cfg, displayValue);
+        return item;
+      },
+
+      bindTooltip(item, key, cfg, displayValue) {
+        const tooltip = document.getElementById('tooltip');
+
+        item.addEventListener('mouseenter', (e) => {
+          let html = `<div class="title">${cfg.name}</div><div>${cfg.desc || ''}</div>`;
+
+          if (key === 'defense') {
+            const reduction = displayValue / (displayValue + 500) * 100;
+            html += `<div class="formula">减伤率 ${reduction.toFixed(2)}%</div>`;
+          } else if (key.endsWith('Resist')) {
+            html += `<div class="formula">${cfg.name}伤害减免 ${displayValue.toFixed(2)}%</div>`;
+          } else if (this.computedAttr[key]) {
+            html += `<div class="formula">公式：${this.computedAttr[key].formula}</div>`;
+          }
+
+          tooltip.innerHTML = html;
+          tooltip.classList.add('visible');
+          this.positionTooltip(e);
+        });
+
+        item.addEventListener('mousemove', (e) => this.positionTooltip(e));
+
+        item.addEventListener('mouseleave', () => {
+          tooltip.classList.remove('visible');
+        });
+      },
+
+      positionTooltip(e) {
+        const tooltip = document.getElementById('tooltip');
+        const x = e.clientX + 15;
+        const y = e.clientY + 15;
+        const rect = tooltip.getBoundingClientRect();
+        const winW = window.innerWidth;
+        const winH = window.innerHeight;
+
+        let left = x;
+        let top = y;
+        if (left + rect.width > winW) left = e.clientX - rect.width - 10;
+        if (top + rect.height > winH) top = e.clientY - rect.height - 10;
+
+        tooltip.style.left = left + 'px';
+        tooltip.style.top = top + 'px';
+      },
+
+      highlightElement(elementId, active) {
+        const affected = this.elementAffected[elementId] || new Set();
+        document.querySelectorAll('.attr-item').forEach(item => {
+          const key = item.dataset.attrKey;
+          if (active && affected.has(key)) {
+            item.classList.add('highlight');
+          } else {
+            item.classList.remove('highlight');
+          }
+        });
+      },
+
+      bindEvents() {
+        document.getElementById('confirmBtn').addEventListener('click', () => this.confirmPoints());
+        document.getElementById('resetBtn').addEventListener('click', () => this.resetAll());
+      }
+    };
+
+    App.init();
+  </script>
+</body>
+</html>
