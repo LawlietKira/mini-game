@@ -331,7 +331,27 @@
             padding: 40px 20px;
         }
 
-        @media (max-width: 1100px) {
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--danger);
+            color: white;
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-size: 13px;
+            z-index: 2000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .toast.visible {
+            opacity: 1;
+        }
+
+        @media (max-width: 750px) {
             main {
                 grid-template-columns: 1fr;
             }
@@ -341,7 +361,7 @@
 
 <body>
     <header>
-        <h1>属性加点工具</h1>
+        <h1>天赋属性加点工具</h1>
         <div class="header-actions">
             <span class="total-points">已确认加点：<strong id="totalPoints">0</strong> / <strong
                     id="totalMaxPoints">500</strong></span>
@@ -353,6 +373,8 @@
     <main id="main">
         <div id="loading" class="empty-msg" style="grid-column: 1 / -1;">正在加载配置...</div>
     </main>
+
+    <div id="toast" class="toast"></div>
 
     <div id="tooltip" class="tooltip"></div>
 
@@ -609,7 +631,7 @@
                 const displayAttrs = this.calculateDisplayAttributes();
                 for (const [key, maxCfg] of Object.entries(this.attrMax)) {
                     if (displayAttrs[key] > maxCfg.max) {
-                        alert(`${maxCfg.name} 超过上限 ${maxCfg.max}，无法确认。请调整加点。`);
+                        this.showToast(`${maxCfg.name} 超过上限 ${maxCfg.max}，无法确认。请调整加点。`);
                         return;
                     }
                 }
@@ -625,10 +647,17 @@
             },
 
             resetAll() {
-                if (!confirm('确定要重置所有加点吗？此操作将清除已保存的数据。')) return;
+                if (!this._resetPending) {
+                    this._resetPending = true;
+                    this.showToast('再次点击重置按钮确认，此操作将清除已保存的数据');
+                    setTimeout(() => { this._resetPending = false; }, 3000);
+                    return;
+                }
+                this._resetPending = false;
                 this.initState();
                 localStorage.removeItem(STORAGE_KEY);
                 this.render();
+                this.showToast('已重置所有加点');
             },
 
             render() {
@@ -845,6 +874,14 @@
                         item.classList.remove('highlight');
                     }
                 });
+            },
+
+            showToast(msg) {
+                const toast = document.getElementById('toast');
+                toast.textContent = msg;
+                toast.classList.add('visible');
+                clearTimeout(this._toastTimer);
+                this._toastTimer = setTimeout(() => toast.classList.remove('visible'), 2500);
             },
 
             bindEvents() {
