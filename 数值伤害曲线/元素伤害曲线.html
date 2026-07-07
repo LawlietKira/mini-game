@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>元素伤害曲线估算</title>
+    <title>各元素形态伤害节奏设计</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
     <style>
         * {
@@ -96,17 +96,33 @@
         .curve-header.fire span {
             color: #e74c3c;
         }
+        .curve-header.fire .btn-toggle {
+            color: #e74c3c;
+            border-color: #e74c3c;
+        }
 
         .curve-header.earth span {
             color: #c08a4b;
+        }
+        .curve-header.earth .btn-toggle {
+            color: #c08a4b;
+            border-color: #c08a4b;
         }
 
         .curve-header.water span {
             color: #3498db;
         }
+        .curve-header.water .btn-toggle {
+            color: #3498db;
+            border-color: #3498db;
+        }
 
         .curve-header.metal span {
             color: #f1c40f;
+        }
+        .curve-header.metal .btn-toggle {
+            color: #f1c40f;
+            border-color: #f1c40f;
         }
 
         .curve-points {
@@ -249,7 +265,6 @@
 
         .btn-toggle.off {
             opacity: 0.3;
-            border-color: #444;
         }
     </style>
 </head>
@@ -257,7 +272,7 @@
 <body>
 
     <div class="header">
-        <h1>元素伤害曲线估算</h1>
+        <h1>各元素形态伤害节奏设计</h1>
     </div>
 
     <div class="main">
@@ -446,7 +461,7 @@
 
             return {
                 title: {
-                    text: '元素伤害曲线估算',
+                    text: '各元素形态伤害节奏设计',
                     left: 'center',
                     textStyle: { color: '#e0c36a', fontSize: 18, fontWeight: 'bold' }
                 },
@@ -464,9 +479,9 @@
                     textStyle: { color: '#eee' }
                 },
                 legend: {
-                    data: ELEMENTS.map(el => ({ name: el, icon: 'roundRect' })),
+                    data: ELEMENTS.map(el => ({ name: el, icon: 'roundRect', textStyle: { color: CURVE_COLORS[el] } })),
                     bottom: 8,
-                    textStyle: { color: '#ccc', fontSize: 13 },
+                    textStyle: { fontSize: 13 },
                     selectedMode: true,
                     selected: { ...curveVisible }
                 },
@@ -689,10 +704,23 @@
             });
             const jsonStr = JSON.stringify(curveData);
             localStorage.setItem(STORAGE_KEY, jsonStr);
+            navigator.clipboard.writeText(jsonStr).then(() => {
+                console.log('数据已复制到剪贴板');
+            }).catch(() => {
+                // 降级方案
+                const ta = document.createElement('textarea');
+                ta.value = jsonStr;
+                ta.style.position = 'fixed';
+                ta.style.left = '-9999px';
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+            });
             console.log('===== 元素伤害曲线数据已保存 =====');
             console.log(jsonStr);
             console.log('===================================');
-            alert('保存成功！数据已存入浏览器缓存，并输出到控制台。');
+            alert('保存成功！数据已存入浏览器缓存，并已复制到剪贴板。');
         }
 
         function loadData() {
